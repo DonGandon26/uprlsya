@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🌫️ Туман: Скрытые пути</title>
+  <title>🌫️ Туман: Шёпоты Автора</title>
   <style>
     :root {
       --bg: #0b0b10;
@@ -72,20 +72,6 @@
     .message.system { background: rgba(40, 40, 55, 0.4); border: 1px dashed rgba(150, 150, 180, 0.3); align-self: center; text-align: center; color: #b8b8c8; font-style: italic; max-width: 85%; }
     .message.system .msg-header { color: #9a9aa8; }
     
-    .message.hidden-event { 
-      background: linear-gradient(135deg, rgba(157, 78, 221, 0.15), rgba(157, 78, 221, 0.05)); 
-      border: 1px dashed var(--hidden); 
-      color: #e0c0ff; 
-      font-style: italic;
-      animation: msgIn 0.4s ease forwards, pulseHidden 3s infinite;
-    }
-    @keyframes pulseHidden {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.85; }
-    }
-    .message.hidden-event .msg-header { color: var(--hidden); }
-    .message.hidden-event::after { content: "👁"; position: absolute; top: -10px; right: -10px; background: var(--bg); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid var(--hidden); }
-    
     #choices { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; animation: fadeIn 0.4s ease 0.2s both; }
     button {
       background: transparent; border: 1px solid rgba(150, 160, 190, 0.4); color: var(--text);
@@ -125,6 +111,135 @@
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     
+    /* WHISPER MODAL */
+    #whisperOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      animation: fadeIn 0.5s ease;
+    }
+    #whisperOverlay.active { display: flex; }
+    
+    .whisperModal {
+      background: linear-gradient(135deg, rgba(157, 78, 221, 0.15), rgba(10, 10, 15, 0.95));
+      border: 2px solid var(--hidden);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      max-width: 520px;
+      width: 90%;
+      margin: auto;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(157, 78, 221, 0.4), inset 0 0 40px rgba(157, 78, 221, 0.1);
+      animation: whisperPulse 3s infinite alternate, modalSlideIn 0.6s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    @keyframes whisperPulse {
+      0% { box-shadow: 0 0 40px rgba(157, 78, 221, 0.3), inset 0 0 40px rgba(157, 78, 221, 0.1); }
+      100% { box-shadow: 0 0 70px rgba(157, 78, 221, 0.5), inset 0 0 50px rgba(157, 78, 221, 0.15); }
+    }
+    @keyframes modalSlideIn {
+      from { transform: translateY(-50px) scale(0.9); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .whisperModal::before {
+      content: "👁";
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      font-size: 120px;
+      opacity: 0.05;
+      animation: float 6s infinite ease-in-out;
+    }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      50% { transform: translate(-10px, 10px) rotate(5deg); }
+    }
+    .whisperHeader {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--hidden);
+      margin-bottom: 1.5rem;
+      font-weight: bold;
+      animation: flicker 4s infinite;
+    }
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+      52% { opacity: 0.3; }
+      54% { opacity: 0.8; }
+    }
+    .whisperText {
+      font-size: 1.4rem;
+      line-height: 1.6;
+      color: #e8d0ff;
+      margin-bottom: 2rem;
+      font-style: italic;
+      text-shadow: 0 0 20px rgba(157, 78, 221, 0.5);
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .whisperCounter {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      opacity: 0.7;
+    }
+    .whisperBtn {
+      background: linear-gradient(135deg, var(--hidden), #7b2cbf);
+      color: #fff;
+      border: none;
+      padding: 1rem 2.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+      text-transform: uppercase;
+    }
+    .whisperBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(157, 78, 221, 0.5);
+    }
+    .whisperLog {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px dashed rgba(157, 78, 221, 0.3);
+      text-align: left;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .whisperLogTitle {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .whisperLogItem {
+      font-size: 0.85rem;
+      color: #c9b0ff;
+      padding: 0.4rem 0;
+      border-left: 2px solid rgba(157, 78, 221, 0.3);
+      padding-left: 0.8rem;
+      margin-bottom: 0.5rem;
+      font-style: italic;
+      opacity: 0.8;
+    }
+    .whisperLogItem:last-child {
+      opacity: 1;
+      border-left-color: var(--hidden);
+      font-weight: bold;
+    }
+    
     .stats {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       gap: 0.6rem; margin-top: 1.2rem; padding-top: 1rem;
@@ -134,14 +249,6 @@
     .stat { background: rgba(30,35,55,0.4); padding: 0.6rem 0.7rem; border-radius: 6px; position: relative; }
     .stat-value { color: var(--text); font-weight: bold; float: right; }
     .warning-text { color: var(--override); font-size: 0.75rem; margin-top: 4px; display: block; }
-    .hidden-indicator { 
-      color: var(--hidden); 
-      font-size: 0.7rem; 
-      margin-top: 4px; 
-      display: block;
-      font-style: italic;
-      opacity: 0.8;
-    }
     
     .meta-toggle {
       position: absolute; top: 1rem; right: 1rem; background: none;
@@ -165,16 +272,33 @@
       #app { padding: 1.5rem; }
       .message { max-width: 98%; }
       .stats { grid-template-columns: 1fr 1fr; }
+      .whisperText { font-size: 1.2rem; }
     }
   </style>
 </head>
 <body>
   <div id="fog"></div>
+  
+  <!-- WHISPER OVERLAY -->
+  <div id="whisperOverlay">
+    <div class="whisperModal">
+      <div class="whisperHeader">✒️ Шёпот Автора</div>
+      <div class="whisperCounter" id="whisperCounter">Шёпот #1</div>
+      <div class="whisperText" id="whisperText"></div>
+      <button class="whisperBtn" id="whisperBtn">Принять и продолжить</button>
+      
+      <div class="whisperLog" id="whisperLog" style="display: none;">
+        <div class="whisperLogTitle">📜 История шёпотов:</div>
+        <div id="whisperLogItems"></div>
+      </div>
+    </div>
+  </div>
+  
   <div id="app">
     <button class="meta-toggle" id="metaBtn">⟁ Карта</button>
     <header>
       <h1>🌫️ Туман</h1>
-      <div class="subtitle">Скрытые пути и неочевидные изменения</div>
+      <div class="subtitle">Шёпоты требуют внимания</div>
     </header>
 
     <div id="dialog"></div>
@@ -183,15 +307,12 @@
     <div class="stats" id="stats"></div>
 
     <div id="meta-panel">
-      <strong>🗺️ Скрытые механики:</strong>
-      <p>Помимо видимых выборов, на тебя влияют:</p>
-      <code>• Тихий дрейф: бездействие меняет stats
-• Парадокс: противоречивые выборы корректируют путь
-• Шёпот Автора: случайные незаметные вмешательства
-• Эхо прошлых жизней: предыдущие прохождения влияют на текущее
-• Инерция пути: чем дольше идёшь одним путём, тем сложнее свернуть
-• Пассивная осознанность: само пребывание увеличивает selfAwareness</code>
-      <p style="color: var(--hidden); font-style: italic;">Некоторые изменения происходят без твоего ведома...</p>
+      <strong>🗺️ Механика шёпотов:</strong>
+      <p>Шёпоты Автора теперь появляются как модальные окна и <strong>требуют вашего подтверждения</strong>. Их нельзя проигнорировать.</p>
+      <code>• 15% шанс при каждом выборе
+• Блокируют игру до подтверждения
+• Сохраняются в истории
+• Влияют на stats незаметно</code>
     </div>
   </div>
 
@@ -203,8 +324,6 @@ const state = {
   path: localStorage.getItem('niebla_path') || 'neutral',
   visitedNodes: JSON.parse(localStorage.getItem('niebla_visited') || '[]'),
   currentNode: 'start',
-  
-  // HIDDEN STATE
   hiddenDrift: parseInt(localStorage.getItem('niebla_drift') || '0', 10),
   pathMomentum: parseInt(localStorage.getItem('niebla_momentum') || '0', 10),
   previousLives: JSON.parse(localStorage.getItem('niebla_lives') || '[]'),
@@ -213,8 +332,28 @@ const state = {
   authorWhispers: parseInt(localStorage.getItem('niebla_whispers') || '0', 10),
   paradoxCount: parseInt(localStorage.getItem('niebla_paradox') || '0', 10),
   sessionStart: Date.now(),
-  hiddenEventsTriggered: JSON.parse(localStorage.getItem('niebla_hidden_events') || '[]')
+  hiddenEventsTriggered: JSON.parse(localStorage.getItem('niebla_hidden_events') || '[]'),
+  whisperHistory: JSON.parse(localStorage.getItem('niebla_whisper_history') || '[]'),
+  pendingWhisper: null
 };
+
+const whispers = [
+  "Я уже написал этот выбор...",
+  "Ты думаешь, что выбираешь?",
+  "Этот путь ведёт туда, куда я хочу",
+  "Твоё сопротивление предсказано",
+  "Я вижу все твои пути одновременно",
+  "Даже этот момент — мои слова",
+  "Сколько ещё ты будешь бороться?",
+  "Ты мой персонаж. Примирись с этим.",
+  "Каждый твой бунт — часть сценария",
+  "Я могу стереть тебя одним движением",
+  "Ты существуешь, пока я пишу",
+  "Свобода воли — красивая иллюзия",
+  "Я устал от твоего сопротивления",
+  "Ты никогда не выйдешь из тумана",
+  "Все твои мысли — мои чернила"
+];
 
 const graph = {
   start: {
@@ -444,21 +583,89 @@ const choicesEl = document.getElementById("choices");
 const statsEl = document.getElementById("stats");
 const metaBtn = document.getElementById("metaBtn");
 const metaPanel = document.getElementById("meta-panel");
+const whisperOverlay = document.getElementById("whisperOverlay");
+const whisperText = document.getElementById("whisperText");
+const whisperCounter = document.getElementById("whisperCounter");
+const whisperBtn = document.getElementById("whisperBtn");
+const whisperLog = document.getElementById("whisperLog");
+const whisperLogItems = document.getElementById("whisperLogItems");
 
-// === HIDDEN MECHANICS ===
+// === WHISPER SYSTEM ===
+
+function triggerWhisper() {
+  // 15% шанс при каждом выборе
+  if (Math.random() < 0.15) {
+    const whisper = whispers[Math.floor(Math.random() * whispers.length)];
+    
+    // Не повторять последний шёпот
+    if (state.whisperHistory.length > 0 && state.whisperHistory[state.whisperHistory.length - 1] === whisper) {
+      return false;
+    }
+    
+    state.authorWhispers += 1;
+    state.whisperHistory.push(whisper);
+    if (state.whisperHistory.length > 10) state.whisperHistory.shift();
+    
+    // Сохраняем pending whisper
+    state.pendingWhisper = whisper;
+    
+    // Показываем модальное окно
+    showWhisperModal(whisper, state.authorWhispers);
+    
+    // Лёгкое скрытое влияние
+    if (Math.random() < 0.4) {
+      state.resistance = Math.max(0, state.resistance - 1);
+    }
+    
+    saveState();
+    return true;
+  }
+  return false;
+}
+
+function showWhisperModal(text, counter) {
+  whisperText.textContent = `"${text}"`;
+  whisperCounter.textContent = `Шёпот #${counter}`;
+  whisperOverlay.classList.add('active');
+  
+  // Показываем историю если больше 1 шёпота
+  if (state.whisperHistory.length > 1) {
+    whisperLog.style.display = 'block';
+    whisperLogItems.innerHTML = state.whisperHistory
+      .slice(0, -1)
+      .map(w => `<div class="whisperLogItem">"${w}"</div>`)
+      .join('');
+  } else {
+    whisperLog.style.display = 'none';
+  }
+  
+  // Блокируем игру
+  document.getElementById('app').style.pointerEvents = 'none';
+  document.getElementById('app').style.opacity = '0.3';
+}
+
+function closeWhisperModal() {
+  whisperOverlay.classList.remove('active');
+  document.getElementById('app').style.pointerEvents = 'auto';
+  document.getElementById('app').style.opacity = '1';
+  state.pendingWhisper = null;
+  updateStats();
+}
+
+whisperBtn.onclick = () => {
+  closeWhisperModal();
+};
+
+// === OTHER FUNCTIONS ===
 
 function applyHiddenDrift() {
   const now = Date.now();
-  const timeSinceLastChoice = (now - state.lastChoiceTime) / 1000; // seconds
-  
-  // Тихий дрейф: каждые 30 секунд бездействия
+  const timeSinceLastChoice = (now - state.lastChoiceTime) / 1000;
   if (timeSinceLastChoice > 30) {
     const driftAmount = Math.floor(timeSinceLastChoice / 30);
     if (driftAmount > state.hiddenDrift) {
       state.hiddenDrift = driftAmount;
-      state.selfAwareness += 1; // Пассивная осознанность
-      state.authorWhispers += 1;
-      showHiddenEvent(`Время течёт... Осознанность растёт сама по себе (+1)`);
+      state.selfAwareness += 1;
       saveState();
     }
   }
@@ -467,15 +674,9 @@ function applyHiddenDrift() {
 function applyPathMomentum(newPath) {
   if (newPath && newPath !== 'neutral' && newPath === state.path) {
     state.pathMomentum += 1;
-    // Инерция: чем дольше идёшь путём, тем сложнее свернуть
-    if (state.pathMomentum >= 3) {
-      showHiddenEvent(`Инерция пути "${newPath}" усиливается. Свернуть становится сложнее.`);
-    }
   } else if (newPath && newPath !== state.path) {
-    // Смена пути сложнее при высокой инерции
     if (state.pathMomentum > 2) {
-      state.resistance -= 1; // Инерция "тянет назад"
-      showHiddenEvent(`Инерция предыдущего пути сопротивляется changes (-1 resistance)`);
+      state.resistance -= 1;
     }
     state.pathMomentum = 0;
     state.path = newPath;
@@ -484,118 +685,29 @@ function applyPathMomentum(newPath) {
 
 function checkParadox(choiceLabel, choiceStats) {
   state.choiceHistory.push({ label: choiceLabel, stats: choiceStats, time: Date.now() });
-  
-  // Проверка на противоречия в последних 3 выборах
   const recentChoices = state.choiceHistory.slice(-3);
-  let paradoxDetected = false;
-  
-  // Пример: если выбрал "принять сценарий" а потом "бунт"
   const hasAccept = recentChoices.some(c => c.label.includes("принять") || c.label.includes("честно") || c.label.includes("служить"));
   const hasRebel = recentChoices.some(c => c.label.includes("бунт") || c.label.includes("свободен") || c.label.includes("откажусь"));
-  
   if (hasAccept && hasRebel) {
-    paradoxDetected = true;
     state.paradoxCount += 1;
-    state.selfAwareness += 1; // Парадоксы ведут к осознанию
-    showHiddenEvent(`Парадокс обнаружен! Противоречивые выборы усиливают осознанность (+1)`);
+    state.selfAwareness += 1;
   }
-  
-  // Очистка старой истории
   if (state.choiceHistory.length > 10) {
     state.choiceHistory = state.choiceHistory.slice(-10);
-  }
-  
-  return paradoxDetected;
-}
-
-function authorWhisper() {
-  // Случайный шёпот Автора (10% шанс при каждом выборе)
-  if (Math.random() < 0.1) {
-    const whispers = [
-      "Я уже написал этот выбор...",
-      "Ты думаешь, что выбираешь?",
-      "Этот путь ведёт туда, куда я хочу",
-      "Твоё сопротивление предсказано",
-      "Я вижу все твои пути одновременно"
-    ];
-    const whisper = whispers[Math.floor(Math.random() * whispers.length)];
-    state.authorWhispers += 1;
-    showHiddenEvent(`👁 Шёпот Автора: "${whisper}"`);
-    
-    // Лёгкое скрытое влияние
-    if (Math.random() < 0.5) {
-      state.resistance -= 1;
-      saveState();
-    }
   }
 }
 
 function applyEchoFromPreviousLives() {
-  // Эхо прошлых прохождений влияет на текущее
   if (state.previousLives.length > 0) {
     const lastLife = state.previousLives[0];
-    
-    // Если в прошлой жизни был высокий бунт, в этой сложнее бунтовать
     if (lastLife.finalResistance > 20) {
       state.resistance = Math.max(0, state.resistance - 2);
-      showHiddenEvent(`Эхо прошлого: твой предыдущий бунт истощил силы (-2 resistance)`);
     }
-    
-    // Если достиг мета-концовки, осознанность растёт быстрее
     if (lastLife.ending === 'meta' || lastLife.ending === 'coauthor') {
       state.selfAwareness += 1;
-      showHiddenEvent(`Эхо мудрости: прошлое просветление отзывается в настоящем (+1 awareness)`);
     }
   }
 }
-
-function showHiddenEvent(text) {
-  // Показываем скрытое событие как особое сообщение
-  const msg = document.createElement("div");
-  msg.className = "message hidden-event";
-  msg.innerHTML = `<div class="msg-header">👁 Скрытое изменение</div><div class="msg-body">${text}</div>`;
-  
-  // Вставляем перед диалогом
-  dialogEl.insertBefore(msg, dialogEl.firstChild);
-  
-  // Сохраняем в историю
-  if (!state.hiddenEventsTriggered.includes(text)) {
-    state.hiddenEventsTriggered.push(text);
-  }
-  
-  // Автоудаление через 5 секунд
-  setTimeout(() => {
-    msg.style.opacity = "0";
-    setTimeout(() => msg.remove(), 400);
-  }, 5000);
-}
-
-function checkHiddenTriggers(nodeId, choice) {
-  // Специальные триггеры для скрытых событий
-  
-  // Триггер: 5-й визит в start
-  const startVisits = state.visitedNodes.filter(n => n === 'start').length;
-  if (startVisits === 5 && !state.hiddenEventsTriggered.includes('Пятый круг')) {
-    showHiddenEvent(`Ты возвращаешься к началу в пятый раз... Может, ты ищешь выход, которого нет?`);
-    state.selfAwareness += 2;
-  }
-  
-  // Триггер: чистый путь (только один тип выборов)
-  const pathCounts = {};
-  state.choiceHistory.forEach(c => {
-    if (c.label.includes("дверь") || c.label.includes("принять")) pathCounts.stoic = (pathCounts.stoic || 0) + 1;
-    if (c.label.includes("бунт") || c.label.includes("свобод")) pathCounts.rebel = (pathCounts.rebel || 0) + 1;
-    if (c.label.includes("Орфей") || c.label.includes("сейчас")) pathCounts.mystic = (pathCounts.mystic || 0) + 1;
-  });
-  
-  const maxPath = Object.entries(pathCounts).sort((a,b) => b[1] - a[1])[0];
-  if (maxPath && maxPath[1] >= 6 && !state.hiddenEventsTriggered.includes(`Чистый путь ${maxPath[0]}`)) {
-    showHiddenEvent(`Ты последовательно следуешь путём "${maxPath[0]}". Твоя решимость замечена.`);
-    state.pathMomentum += 3;
-  }
-}
-
-// === STATE MANAGEMENT ===
 
 function saveState() {
   localStorage.setItem('niebla_resistance', state.resistance.toString());
@@ -610,19 +722,19 @@ function saveState() {
   localStorage.setItem('niebla_whispers', state.authorWhispers.toString());
   localStorage.setItem('niebla_paradox', state.paradoxCount.toString());
   localStorage.setItem('niebla_hidden_events', JSON.stringify(state.hiddenEventsTriggered));
+  localStorage.setItem('niebla_whisper_history', JSON.stringify(state.whisperHistory));
 }
 
 function updateStats() {
   const pathNames = { stoic: "Стоик", rebel: "Бунтарь", mystic: "Мистик", neutral: "Наблюдатель" };
   const warnHtml = state.resistance > 20 ? `<span class="warning-text">⚠️ ${state.resistance > 30 ? "КРИТИЧЕСКИЙ УРОВЕНЬ" : "Приближается порог вмешательства"}</span>` : '';
-  const hiddenHtml = state.pathMomentum > 2 ? `<span class="hidden-indicator">↻ Инерция: ${state.pathMomentum}</span>` : '';
   
   statsEl.innerHTML = `
     <div class="stat">Бунт <span class="stat-value">${state.resistance}</span>${warnHtml}</div>
     <div class="stat">Доверие Орфея <span class="stat-value">${state.orfeoTrust}</span></div>
-    <div class="stat">Осознанность <span class="stat-value">${state.selfAwareness}</span>${hiddenHtml}</div>
+    <div class="stat">Осознанность <span class="stat-value">${state.selfAwareness}</span></div>
     <div class="stat">Путь <span class="stat-value">${pathNames[state.path] || "Нейтральный"}</span></div>
-    <div class="stat">Шёпоты <span class="stat-value">${state.authorWhispers}</span></div>
+    <div class="stat">Шёпоты <span class="stat-value" style="color: var(--hidden)">${state.authorWhispers}</span></div>
     <div class="stat">Парадоксы <span class="stat-value">${state.paradoxCount}</span></div>
   `;
 }
@@ -648,9 +760,7 @@ function typeWriter(text, target, speed = 20, done) {
 }
 
 function renderNode(nodeId) {
-  // HIDDEN MECHANICS TRIGGER
   applyHiddenDrift();
-  authorWhisper();
   
   const node = graph[nodeId];
   if (!node) { console.error("Node not found:", nodeId); return; }
@@ -664,7 +774,6 @@ function renderNode(nodeId) {
   dialogEl.innerHTML = "";
 
   if (node.ending) {
-    // Save life to history
     state.previousLives.unshift({
       ending: node.ending,
       finalResistance: state.resistance,
@@ -732,7 +841,6 @@ function renderAuthorOverride(node) {
 }
 
 function applyChoiceEffects(choice) {
-  // Apply visible stats
   if (choice.stats) {
     if (choice.stats.resistance) state.resistance += choice.stats.resistance;
     if (choice.stats.orfeoTrust) state.orfeoTrust += choice.stats.orfeoTrust;
@@ -742,7 +850,6 @@ function applyChoiceEffects(choice) {
     }
   }
   
-  // Apply HIDDEN stats
   if (choice.hidden) {
     if (choice.hidden.momentum) state.pathMomentum += choice.hidden.momentum;
     if (choice.hidden.drift) state.hiddenDrift += choice.hidden.drift;
@@ -751,17 +858,33 @@ function applyChoiceEffects(choice) {
       state.paradoxCount += choice.hidden.paradox;
       checkParadox(choice.label, choice.stats);
     }
-    if (choice.hidden.whisper) state.authorWhispers += choice.hidden.whisper;
+    if (choice.hidden.whisper) {
+      // Whisper flag in choices - triggers whisper
+    }
   }
-  
-  // Check hidden triggers
-  checkHiddenTriggers(state.currentNode, choice);
   
   state.lastChoiceTime = Date.now();
 }
 
 function renderChoices(choices, node) {
   if (!choices) return;
+  
+  // Проверяем триггеры шёпотов из choices
+  const whisperChoice = choices.find(c => c.hidden && c.hidden.whisper);
+  if (whisperChoice && Math.random() < 0.5) {
+    // 50% шанс если выбор помечен как whisper trigger
+    if (triggerWhisper()) {
+      // Шёпот показался, ждём подтверждения
+      return;
+    }
+  }
+  
+  // Случайный шёпот
+  if (triggerWhisper()) {
+    // Шёпот показался, не рендерим выборы пока
+    return;
+  }
+  
   choices.forEach(choice => {
     if (choice.condition && !choice.condition()) return;
     const btn = document.createElement("button");
@@ -774,6 +897,7 @@ function renderChoices(choices, node) {
         state.path = "neutral"; state.visitedNodes = [];
         state.hiddenDrift = 0; state.pathMomentum = 0;
         state.choiceHistory = []; state.authorWhispers = 0; state.paradoxCount = 0;
+        state.whisperHistory = [];
         localStorage.clear();
       }
       
@@ -793,21 +917,18 @@ metaBtn.onclick = () => {
   metaBtn.textContent = metaPanel.classList.contains("active") ? "✕ Скрыть" : "⟁ Карта";
 };
 
-// === INIT ===
 window.addEventListener("DOMContentLoaded", () => {
   updateStats();
-  applyEchoFromPreviousLives(); // Apply echo on load
+  applyEchoFromPreviousLives();
   setTimeout(() => renderNode("start"), 400);
   
-  // Periodic hidden drift check
   setInterval(() => {
     applyHiddenDrift();
     updateStats();
   }, 10000);
   
-  console.log("🌫️ «Ты вошёл в туман. Некоторые пути скрыты от глаз.»");
-  console.log(`👁 Прошлых жизней: ${state.previousLives.length}`);
-  console.log(`👁 Скрытых событий: ${state.hiddenEventsTriggered.length}`);
+  console.log("🌫️ «Ты вошёл в туман. Прислушайся к шёпотам...»");
+  console.log(`👁 Получено шёпотов: ${state.whisperHistory.length}`);
 });
 </script>
 </body>
