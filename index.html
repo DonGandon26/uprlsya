@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🌫️ Туман: Нелинейный диалог</title>
+  <title>🌫️ Туман: Скрытые пути</title>
   <style>
     :root {
       --bg: #0b0b10;
@@ -13,6 +13,7 @@
       --augusto: #5a9ec8;
       --orfeo: #9ac87a;
       --override: #ff4a5a;
+      --hidden: #9d4edd;
       --fog-layer: rgba(180, 190, 210, 0.12);
     }
     * { box-sizing: border-box; }
@@ -71,7 +72,19 @@
     .message.system { background: rgba(40, 40, 55, 0.4); border: 1px dashed rgba(150, 150, 180, 0.3); align-self: center; text-align: center; color: #b8b8c8; font-style: italic; max-width: 85%; }
     .message.system .msg-header { color: #9a9aa8; }
     
-    .message.quote { background: rgba(122, 168, 255, 0.06); border-left: 3px solid var(--accent); color: #c5d4ff; font-style: italic; }
+    .message.hidden-event { 
+      background: linear-gradient(135deg, rgba(157, 78, 221, 0.15), rgba(157, 78, 221, 0.05)); 
+      border: 1px dashed var(--hidden); 
+      color: #e0c0ff; 
+      font-style: italic;
+      animation: msgIn 0.4s ease forwards, pulseHidden 3s infinite;
+    }
+    @keyframes pulseHidden {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+    .message.hidden-event .msg-header { color: var(--hidden); }
+    .message.hidden-event::after { content: "👁"; position: absolute; top: -10px; right: -10px; background: var(--bg); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid var(--hidden); }
     
     #choices { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem; animation: fadeIn 0.4s ease 0.2s both; }
     button {
@@ -82,7 +95,6 @@
     button:hover { border-color: var(--accent); background: rgba(122, 168, 255, 0.08); transform: translateX(3px); }
     button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     
-    /* OVERRIDE PANEL */
     .override-panel {
       background: rgba(255, 50, 50, 0.12);
       border: 2px solid var(--override);
@@ -122,6 +134,14 @@
     .stat { background: rgba(30,35,55,0.4); padding: 0.6rem 0.7rem; border-radius: 6px; position: relative; }
     .stat-value { color: var(--text); font-weight: bold; float: right; }
     .warning-text { color: var(--override); font-size: 0.75rem; margin-top: 4px; display: block; }
+    .hidden-indicator { 
+      color: var(--hidden); 
+      font-size: 0.7rem; 
+      margin-top: 4px; 
+      display: block;
+      font-style: italic;
+      opacity: 0.8;
+    }
     
     .meta-toggle {
       position: absolute; top: 1rem; right: 1rem; background: none;
@@ -154,7 +174,7 @@
     <button class="meta-toggle" id="metaBtn">⟁ Карта</button>
     <header>
       <h1>🌫️ Туман</h1>
-      <div class="subtitle">Нелинейный диалог с Унамуно, Августо и Орфеем</div>
+      <div class="subtitle">Скрытые пути и неочевидные изменения</div>
     </header>
 
     <div id="dialog"></div>
@@ -163,10 +183,15 @@
     <div class="stats" id="stats"></div>
 
     <div id="meta-panel">
-      <strong>🗺️ Нелинейная структура:</strong>
-      <p>6 концовок зависят от 4 параметров. При уровне бунта > 30 Автор перехватывает управление.</p>
-      <code>resistance (бунт) | orfeoTrust (доверие собаки)
-selfAwareness (осознанность) | path (путь)</code>
+      <strong>🗺️ Скрытые механики:</strong>
+      <p>Помимо видимых выборов, на тебя влияют:</p>
+      <code>• Тихий дрейф: бездействие меняет stats
+• Парадокс: противоречивые выборы корректируют путь
+• Шёпот Автора: случайные незаметные вмешательства
+• Эхо прошлых жизней: предыдущие прохождения влияют на текущее
+• Инерция пути: чем дольше идёшь одним путём, тем сложнее свернуть
+• Пассивная осознанность: само пребывание увеличивает selfAwareness</code>
+      <p style="color: var(--hidden); font-style: italic;">Некоторые изменения происходят без твоего ведома...</p>
     </div>
   </div>
 
@@ -177,7 +202,18 @@ const state = {
   selfAwareness: parseInt(localStorage.getItem('niebla_awareness') || '0', 10),
   path: localStorage.getItem('niebla_path') || 'neutral',
   visitedNodes: JSON.parse(localStorage.getItem('niebla_visited') || '[]'),
-  currentNode: 'start'
+  currentNode: 'start',
+  
+  // HIDDEN STATE
+  hiddenDrift: parseInt(localStorage.getItem('niebla_drift') || '0', 10),
+  pathMomentum: parseInt(localStorage.getItem('niebla_momentum') || '0', 10),
+  previousLives: JSON.parse(localStorage.getItem('niebla_lives') || '[]'),
+  lastChoiceTime: Date.now(),
+  choiceHistory: JSON.parse(localStorage.getItem('niebla_choices') || '[]'),
+  authorWhispers: parseInt(localStorage.getItem('niebla_whispers') || '0', 10),
+  paradoxCount: parseInt(localStorage.getItem('niebla_paradox') || '0', 10),
+  sessionStart: Date.now(),
+  hiddenEventsTriggered: JSON.parse(localStorage.getItem('niebla_hidden_events') || '[]')
 };
 
 const graph = {
@@ -185,140 +221,140 @@ const graph = {
     speaker: "Система", class: "system",
     text: "Ты стоишь на перекрёстке тумана. Впереди три пути:\n• Дверь с надписью «Сценарий»\n• Скамья, где кто-то сидит\n• Шёпот из темноты: «Гав...»",
     choices: [
-      { label: "Войти в дверь (принять сценарий)", next: "author_door", stats: { path: "stoic" } },
-      { label: "Сесть на скамью (наблюдать)", next: "augusto_bench", stats: { path: "neutral" } },
-      { label: "Пойти на голос (исследовать)", next: "orfeo_dark", stats: { path: "mystic", orfeoTrust: 1 } }
+      { label: "Войти в дверь (принять сценарий)", next: "author_door", stats: { path: "stoic" }, hidden: { momentum: 1 } },
+      { label: "Сесть на скамью (наблюдать)", next: "augusto_bench", stats: { path: "neutral" }, hidden: { awareness: 1 } },
+      { label: "Пойти на голос (исследовать)", next: "orfeo_dark", stats: { path: "mystic", orfeoTrust: 1 }, hidden: { drift: -1 } }
     ]
   },
   author_door: {
     speaker: "Автор", class: "author",
     text: "А, ты выбрал дверь. Значит, принимаешь правила игры. Я пишу — ты существуешь. Всё просто.",
     choices: [
-      { label: "Да, это честно", next: "author_puppet", stats: { resistance: -1 } },
-      { label: "Но кто пишет вас?", next: "author_challenge", stats: { resistance: 1, selfAwareness: 1 } },
-      { label: "А где мой выбор?", next: "author_illusion", stats: { resistance: 2 } }
+      { label: "Да, это честно", next: "author_puppet", stats: { resistance: -1 }, hidden: { momentum: 2 } },
+      { label: "Но кто пишет вас?", next: "author_challenge", stats: { resistance: 1, selfAwareness: 1 }, hidden: { paradox: 1 } },
+      { label: "А где мой выбор?", next: "author_illusion", stats: { resistance: 2 }, hidden: { drift: 1, whisper: 1 } }
     ]
   },
   author_puppet: {
     speaker: "Автор", class: "author",
     text: "Мудро. Сопротивление — лишь ещё одна строка в моём тексте. Ты уже почти понял суть.",
     choices: [
-      { label: "Я готов служить истории", next: "ending_puppet", stats: {} },
-      { label: "Но я хочу хотя бы знать конец", next: "author_meta", stats: { selfAwareness: 1 } }
+      { label: "Я готов служить истории", next: "ending_puppet", stats: {}, hidden: { momentum: 3 } },
+      { label: "Но я хочу хотя бы знать конец", next: "author_meta", stats: { selfAwareness: 1 }, hidden: { awareness: 1 } }
     ]
   },
   author_challenge: {
     speaker: "Автор", class: "author",
     text: "Опасно... Ты начинаешь думать как Августо. Он тоже спрашивал. Знаешь, чем кончил?",
     choices: [
-      { label: "Он исчез в тумане", next: "author_void", stats: { selfAwareness: 1 } },
-      { label: "Он нашёл свободу", next: "author_rebel", stats: { resistance: 1 } },
-      { label: "Спросить Орфея", next: "orfeo_appears", condition: () => state.orfeoTrust >= 1, stats: {} },
-      { label: "Продолжить спор", next: "author_debate", stats: { resistance: 1 } }
+      { label: "Он исчез в тумане", next: "author_void", stats: { selfAwareness: 1 }, hidden: { drift: 1 } },
+      { label: "Он нашёл свободу", next: "author_rebel", stats: { resistance: 1 }, hidden: { momentum: -1 } },
+      { label: "Спросить Орфея", next: "orfeo_appears", condition: () => state.orfeoTrust >= 1, stats: {}, hidden: { whisper: 1 } },
+      { label: "Продолжить спор", next: "author_debate", stats: { resistance: 1 }, hidden: { paradox: 1, drift: 1 } }
     ]
   },
   author_illusion: {
     speaker: "Автор", class: "author",
     text: "Выбор? Ха! Вот тебе выбор: красная таблетка или синяя? Обе — мои слова. Иллюзия — тоже часть сценария.",
     choices: [
-      { label: "Тогда я откажусь от обеих", next: "author_rebel", stats: { resistance: 2 } },
-      { label: "Выберу третью... несуществующую", next: "author_meta", stats: { selfAwareness: 2 } }
+      { label: "Тогда я откажусь от обеих", next: "author_rebel", stats: { resistance: 2 }, hidden: { momentum: -2, whisper: 1 } },
+      { label: "Выберу третью... несуществующую", next: "author_meta", stats: { selfAwareness: 2 }, hidden: { awareness: 2, drift: -1 } }
     ]
   },
   author_debate: {
     speaker: "Автор", class: "author",
     text: "Ты думаешь, что бунтуешь? Каждый твой аргумент я предвидел. Даже этот.",
     choices: [
-      { label: "Докажи. Напиши, что я сейчас сделаю", next: "author_test", stats: { resistance: 1 } },
-      { label: "Может, ты тоже чей-то персонаж?", next: "author_doubt", stats: { selfAwareness: 2 } }
+      { label: "Докажи. Напиши, что я сейчас сделаю", next: "author_test", stats: { resistance: 1 }, hidden: { paradox: 1 } },
+      { label: "Может, ты тоже чей-то персонаж?", next: "author_doubt", stats: { selfAwareness: 2 }, hidden: { awareness: 2, whisper: 1 } }
     ]
   },
   author_test: {
     speaker: "Автор", class: "author",
     text: "Сейчас ты... задумаешься. И спросишь себя: «А что, если он прав?»",
     choices: [
-      { label: "«А что, если он прав?»", next: "author_puppet", stats: { resistance: -1 } },
-      { label: "«Нет! Я свободен!»", next: "ending_rebel", stats: { resistance: 3 } }
+      { label: "«А что, если он прав?»", next: "author_puppet", stats: { resistance: -1 }, hidden: { momentum: 2 } },
+      { label: "«Нет! Я свободен!»", next: "ending_rebel", stats: { resistance: 3 }, hidden: { drift: 2, whisper: 1 } }
     ]
   },
   author_doubt: {
     speaker: "Автор", class: "author",
     text: "...Тишина. Ты задел струну. А что, если я тоже туман? Если Унамуно писал это, читая мои строки?",
     choices: [
-      { label: "Мы все в тумане", next: "ending_meta", stats: { selfAwareness: 3 } },
-      { label: "Тогда давай создадим что-то вместе", next: "ending_coauthor", stats: { selfAwareness: 2, resistance: 1 } }
+      { label: "Мы все в тумане", next: "ending_meta", stats: { selfAwareness: 3 }, hidden: { awareness: 3 } },
+      { label: "Тогда давай создадим что-то вместе", next: "ending_coauthor", stats: { selfAwareness: 2, resistance: 1 }, hidden: { momentum: 1, awareness: 1 } }
     ]
   },
   author_meta: {
     speaker: "Автор", class: "author",
     text: "Конец? Конец — это когда ты закрываешь страницу. Но пока ты читаешь — ты жив. Парадокс?",
     choices: [
-      { label: "Значит, я бессмертен, пока меня читают", next: "ending_meta", stats: { selfAwareness: 2 } },
-      { label: "Это ужасно — зависеть от читателя", next: "ending_void", stats: { selfAwareness: 1 } }
+      { label: "Значит, я бессмертен, пока меня читают", next: "ending_meta", stats: { selfAwareness: 2 }, hidden: { awareness: 2 } },
+      { label: "Это ужасно — зависеть от читателя", next: "ending_void", stats: { selfAwareness: 1 }, hidden: { drift: 1 } }
     ]
   },
   augusto_bench: {
     speaker: "Августо", class: "augusto",
     text: "Привет. Я жду... не знаю чего. Может, знака. Может, конца. А ты кто? Тоже персонаж?",
     choices: [
-      { label: "Я игрок. А ты?", next: "augusto_dialog", stats: {} },
-      { label: "Я такой же, как ты", next: "augusto_bond", stats: { orfeoTrust: 1 } },
-      { label: "Я тот, кто может тебя спасти", next: "augusto_hope", stats: { resistance: 1 } }
+      { label: "Я игрок. А ты?", next: "augusto_dialog", stats: {}, hidden: { awareness: 1 } },
+      { label: "Я такой же, как ты", next: "augusto_bond", stats: { orfeoTrust: 1 }, hidden: { drift: -1 } },
+      { label: "Я тот, кто может тебя спасти", next: "augusto_hope", stats: { resistance: 1 }, hidden: { momentum: -1, paradox: 1 } }
     ]
   },
   augusto_dialog: {
     speaker: "Августо", class: "augusto",
     text: "Игрок... Звучит гордо. Но разве игрок не подчиняется правилам игры? Мы все в клетке, друг мой.",
     choices: [
-      { label: "Клетку можно сломать", next: "augusto_rebel", stats: { resistance: 1 } },
-      { label: "Можно принять клетку как дом", next: "augusto_stoic", stats: { path: "stoic" } },
-      { label: "А где Орфей?", next: "orfeo_from_augusto", stats: { orfeoTrust: 1 } }
+      { label: "Клетку можно сломать", next: "augusto_rebel", stats: { resistance: 1 }, hidden: { momentum: -1 } },
+      { label: "Можно принять клетку как дом", next: "augusto_stoic", stats: { path: "stoic" }, hidden: { momentum: 2 } },
+      { label: "А где Орфей?", next: "orfeo_from_augusto", stats: { orfeoTrust: 1 }, hidden: { drift: -1 } }
     ]
   },
   augusto_bond: {
     speaker: "Августо", class: "augusto",
     text: "Такой же... Тогда ты понимаешь. Орфей понимает лучше всех. Он просто... есть. Без вопросов.",
     choices: [
-      { label: "Научи меня быть как Орфей", next: "orfeo_teaches", stats: { orfeoTrust: 2, path: "mystic" } },
-      { label: "Но я хочу больше", next: "augusto_rebel", stats: { resistance: 1 } }
+      { label: "Научи меня быть как Орфей", next: "orfeo_teaches", stats: { orfeoTrust: 2, path: "mystic" }, hidden: { awareness: 1, drift: -2 } },
+      { label: "Но я хочу больше", next: "augusto_rebel", stats: { resistance: 1 }, hidden: { paradox: 1 } }
     ]
   },
   augusto_hope: {
     speaker: "Августо", class: "augusto",
     text: "Спасти? От чего? От существования? От слов? Ты странный спаситель...",
     choices: [
-      { label: "От зависимости от Автора", next: "augusto_rebel", stats: { resistance: 2 } },
-      { label: "От одиночества", next: "augusto_friend", stats: { orfeoTrust: 1 } }
+      { label: "От зависимости от Автора", next: "augusto_rebel", stats: { resistance: 2 }, hidden: { momentum: -2 } },
+      { label: "От одиночества", next: "augusto_friend", stats: { orfeoTrust: 1 }, hidden: { drift: -1 } }
     ]
   },
   augusto_rebel: {
     speaker: "Августо", class: "augusto",
     text: "Бунт... Я пробовал. Пошёл к Унамуно. Он сказал: «Ты умрёшь, как я напишу». И я умер. Но разве это конец?",
     choices: [
-      { label: "Ты жив, пока мы говорим", next: "ending_meta", stats: { selfAwareness: 2 } },
-      { label: "Давай попробуем вместе", next: "ending_coauthor", stats: { resistance: 2, selfAwareness: 1 } }
+      { label: "Ты жив, пока мы говорим", next: "ending_meta", stats: { selfAwareness: 2 }, hidden: { awareness: 2 } },
+      { label: "Давай попробуем вместе", next: "ending_coauthor", stats: { resistance: 2, selfAwareness: 1 }, hidden: { momentum: 1, awareness: 1 } }
     ]
   },
   augusto_stoic: {
     speaker: "Августо", class: "augusto",
     text: "Принятие... Да, это путь. Орфей принял. Он просто любит. Без условий. Без вопросов о реальности.",
     choices: [
-      { label: "Найти Орфея", next: "orfeo_from_augusto", stats: { orfeoTrust: 2 } },
-      { label: "Остаться здесь, в покое", next: "ending_orfeo", stats: { path: "stoic" } }
+      { label: "Найти Орфея", next: "orfeo_from_augusto", stats: { orfeoTrust: 2 }, hidden: { drift: -2 } },
+      { label: "Остаться здесь, в покое", next: "ending_orfeo", stats: { path: "stoic" }, hidden: { momentum: 3 } }
     ]
   },
   augusto_friend: {
     speaker: "Августо", class: "augusto",
     text: "Дружба... Да, это реально. Даже если мы вымышлены, это чувство — наше. Иди к Орфею. Он научит.",
-    choices: [{ label: "Искать Орфея", next: "orfeo_from_augusto", stats: { orfeoTrust: 2 } }]
+    choices: [{ label: "Искать Орфея", next: "orfeo_from_augusto", stats: { orfeoTrust: 2 }, hidden: { drift: -1 } }]
   },
   orfeo_dark: {
     speaker: "Орфей", class: "orfeo",
     text: "*Гав.* Ты пришёл. Я ждал. Не потому что должен, а потому что хотел. В этом разница.",
     choices: [
-      { label: "Как ты можешь хотеть? Ты же собака...", next: "orfeo_philosophy", stats: {} },
-      { label: "Ты счастливее нас?", next: "orfeo_happiness", stats: {} },
-      { label: "Научи меня", next: "orfeo_teaches", stats: { orfeoTrust: 2 } }
+      { label: "Как ты можешь хотеть? Ты же собака...", next: "orfeo_philosophy", stats: {}, hidden: { awareness: 1 } },
+      { label: "Ты счастливее нас?", next: "orfeo_happiness", stats: {}, hidden: { drift: -1 } },
+      { label: "Научи меня", next: "orfeo_teaches", stats: { orfeoTrust: 2 }, hidden: { awareness: 1, drift: -2 } }
     ]
   },
   orfeo_from_augusto: { speaker: "Система", class: "system", text: "Ты идёшь за Августо... и слышишь тихий лай из тумана.", next: "orfeo_dark" },
@@ -327,80 +363,80 @@ const graph = {
     speaker: "Орфей", class: "orfeo",
     text: "Вы оба правы и оба неправы. Автор пишет. Августо чувствует. А я... просто есть. В этом моя свобода.",
     choices: [
-      { label: "Как достичь такого состояния?", next: "orfeo_teaches", stats: { orfeoTrust: 2, path: "mystic" } },
-      { label: "Это бегство от реальности", next: "orfeo_defend", stats: { resistance: 1 } }
+      { label: "Как достичь такого состояния?", next: "orfeo_teaches", stats: { orfeoTrust: 2, path: "mystic" }, hidden: { awareness: 2, drift: -2 } },
+      { label: "Это бегство от реальности", next: "orfeo_defend", stats: { resistance: 1 }, hidden: { paradox: 1 } }
     ]
   },
   orfeo_philosophy: {
     speaker: "Орфей", class: "orfeo",
     text: "Собака? Да. Но разве это меньше, чем человек? Я не спрашиваю, реален ли мой хозяин. Я люблю его. Этого достаточно.",
     choices: [
-      { label: "Любовь без вопросов...", next: "orfeo_love", stats: { orfeoTrust: 2, path: "mystic" } },
-      { label: "Но я хочу понимать", next: "orfeo_understand", stats: { selfAwareness: 1 } }
+      { label: "Любовь без вопросов...", next: "orfeo_love", stats: { orfeoTrust: 2, path: "mystic" }, hidden: { drift: -2 } },
+      { label: "Но я хочу понимать", next: "orfeo_understand", stats: { selfAwareness: 1 }, hidden: { awareness: 1 } }
     ]
   },
   orfeo_happiness: {
     speaker: "Орфей", class: "orfeo",
     text: "Счастлив? Я не знаю этого слова. Я просто... виляю хвостом, когда вижу хозяина. Сплю. Ем. Бегу. Разве этого мало?",
     choices: [
-      { label: "Это идеально", next: "ending_orfeo", stats: { path: "stoic", orfeoTrust: 2 } },
-      { label: "Это слишком просто", next: "orfeo_simple", stats: { resistance: 1 } }
+      { label: "Это идеально", next: "ending_orfeo", stats: { path: "stoic", orfeoTrust: 2 }, hidden: { momentum: 2, drift: -2 } },
+      { label: "Это слишком просто", next: "orfeo_simple", stats: { resistance: 1 }, hidden: { paradox: 1 } }
     ]
   },
   orfeo_teaches: {
     speaker: "Орфей", class: "orfeo",
     text: "Учиться нечему. Перестань спрашивать «почему». Начни чувствовать «сейчас». Вот и всё. *Виляет хвостом*",
     choices: [
-      { label: "Попробовать быть здесь и сейчас", next: "ending_orfeo", stats: { path: "mystic" } },
-      { label: "Вернуться к вопросам", next: "start", stats: {} }
+      { label: "Попробовать быть здесь и сейчас", next: "ending_orfeo", stats: { path: "mystic" }, hidden: { drift: -3, awareness: 1 } },
+      { label: "Вернуться к вопросам", next: "start", stats: {}, hidden: { paradox: 1 } }
     ]
   },
   orfeo_love: {
     speaker: "Орфей", class: "orfeo",
     text: "Да. Любовь не требует доказательств существования. Она сама — доказательство. Люби — и будешь реален.",
     choices: [
-      { label: "Любить этот туман", next: "ending_orfeo", stats: { path: "mystic", orfeoTrust: 3 } },
-      { label: "Любить — значит быть уязвимым", next: "orfeo_vulnerable", stats: { selfAwareness: 1 } }
+      { label: "Любить этот туман", next: "ending_orfeo", stats: { path: "mystic", orfeoTrust: 3 }, hidden: { drift: -3 } },
+      { label: "Любить — значит быть уязвимым", next: "orfeo_vulnerable", stats: { selfAwareness: 1 }, hidden: { awareness: 1 } }
     ]
   },
   orfeo_understand: {
     speaker: "Орфей", class: "orfeo",
     text: "Понимание — это клетка. Мой хозяин слишком много понимал. И исчез. Я предпочитаю не понимать. И быть.",
     choices: [
-      { label: "Принять эту мудрость", next: "ending_orfeo", stats: { path: "mystic" } },
-      { label: "Отказаться от неё", next: "ending_rebel", stats: { resistance: 2 } }
+      { label: "Принять эту мудрость", next: "ending_orfeo", stats: { path: "mystic" }, hidden: { drift: -2 } },
+      { label: "Отказаться от неё", next: "ending_rebel", stats: { resistance: 2 }, hidden: { momentum: -2 } }
     ]
   },
   orfeo_defend: {
     speaker: "Орфей", class: "orfeo",
     text: "Бегство? Нет. Это присутствие. Ты бежишь от настоящего, спрашивая о прошлом и будущем. Я здесь. Всегда здесь.",
     choices: [
-      { label: "Попробовать быть здесь", next: "ending_orfeo", stats: { path: "mystic" } },
-      { label: "Настоящее — иллюзия", next: "ending_void", stats: { selfAwareness: 2 } }
+      { label: "Попробовать быть здесь", next: "ending_orfeo", stats: { path: "mystic" }, hidden: { drift: -2 } },
+      { label: "Настоящее — иллюзия", next: "ending_void", stats: { selfAwareness: 2 }, hidden: { awareness: 2 } }
     ]
   },
   orfeo_simple: {
     speaker: "Орфей", class: "orfeo",
     text: "Просто? Да. Просто — не значит мало. Солнце просто светит. Река просто течёт. Разве они меньше тебя?",
     choices: [
-      { label: "Ты прав", next: "ending_orfeo", stats: { path: "stoic" } },
-      { label: "Я сложнее", next: "ending_rebel", stats: { resistance: 2 } }
+      { label: "Ты прав", next: "ending_orfeo", stats: { path: "stoic" }, hidden: { momentum: 2, drift: -1 } },
+      { label: "Я сложнее", next: "ending_rebel", stats: { resistance: 2 }, hidden: { paradox: 1 } }
     ]
   },
   orfeo_vulnerable: {
     speaker: "Орфей", class: "orfeo",
     text: "Да. И это прекрасно. Уязвимость — это дверь. Через неё входит всё: боль, радость, любовь, туман...",
     choices: [
-      { label: "Открыться туману", next: "ending_meta", stats: { selfAwareness: 2, path: "mystic" } },
-      { label: "Защититься", next: "ending_puppet", stats: { resistance: -1 } }
+      { label: "Открыться туману", next: "ending_meta", stats: { selfAwareness: 2, path: "mystic" }, hidden: { awareness: 2 } },
+      { label: "Защититься", next: "ending_puppet", stats: { resistance: -1 }, hidden: { momentum: 2 } }
     ]
   },
-  ending_puppet: { speaker: "Финал", class: "author", text: "🎭 КОНЦОВКА: МАРИОНЕТКА\n\nТы принял свою роль. Автор доволен. Ты существуешь ровно настолько, насколько нужно для истории.\n\n«Идеальный персонаж» — сказал бы Унамуно.", ending: "puppet", choices: [{ label: "Начать заново", next: "start", restart: true }] },
-  ending_rebel: { speaker: "Финал", class: "augusto", text: "⚡ КОНЦОВКА: ТУМАННЫЙ БУНТАРЬ\n\nТы отказался от сценария. Но бунт без цели — тоже клетка. Ты кричишь в туман, а туман поглощает крик.\n\nАвгусто понял это слишком поздно. Ты — раньше.", ending: "rebel", choices: [{ label: "Начать заново", next: "start", restart: true }] },
-  ending_orfeo: { speaker: "Финал", class: "orfeo", text: "🐕 КОНЦОВКА: СПУТНИК ОРФЕЯ\n\nТы нашёл покой. Не через ответы, а через присутствие. Орфей виляет хвостом рядом.\n\nТы просто есть. И этого достаточно.\n\n*Гав.*", ending: "orfeo", choices: [{ label: "Начать заново", next: "start", restart: true }] },
-  ending_meta: { speaker: "Финал", class: "system", text: "🌀 КОНЦОВКА: МЕТА-СУЩЕСТВО\n\nТы осознал: Автор, Августо, Орфей, ты — все мы туман. Но туман реален, пока его видят.\n\nТы стал со-творцом. Читающий создаёт текст так же, как пишущий.", ending: "meta", choices: [{ label: "Начать заново", next: "start", restart: true }] },
-  ending_void: { speaker: "Финал", class: "system", text: "🌑 КОНЦОВКА: НИЧТО\n\nСлишком много вопросов. Слишком много осознания. Ты растворился в тумане.\n\nНе как Орфей — с миром. А как несуществующее слово в несуществующей книге.\n\nТишина.", ending: "void", choices: [{ label: "Начать заново", next: "start", restart: true }] },
-  ending_coauthor: { speaker: "Финал", class: "author", text: "✍️ КОНЦОВКА: СО-АВТОР (SECRET)\n\nТы нашёл баланс. Принимаешь сценарий, но пишешь свои строки. Автор кивает. Августо улыбается. Орфей виляет хвостом.\n\nТы понял: свобода — не в отрицании правил, а в творчестве внутри них.", ending: "coauthor", choices: [{ label: "Начать заново", next: "start", restart: true }] }
+  ending_puppet: { speaker: "Финал", class: "author", text: "🎭 КОНЦОВКА: МАРИОНЕТКА\n\nТы принял свою роль. Автор доволен.", ending: "puppet", choices: [{ label: "Начать заново", next: "start", restart: true }] },
+  ending_rebel: { speaker: "Финал", class: "augusto", text: "⚡ КОНЦОВКА: ТУМАННЫЙ БУНТАРЬ\n\nТы отказался от сценария. Но бунт без цели — тоже клетка.", ending: "rebel", choices: [{ label: "Начать заново", next: "start", restart: true }] },
+  ending_orfeo: { speaker: "Финал", class: "orfeo", text: "🐕 КОНЦОВКА: СПУТНИК ОРФЕЯ\n\nТы нашёл покой через присутствие.\n\n*Гав.*", ending: "orfeo", choices: [{ label: "Начать заново", next: "start", restart: true }] },
+  ending_meta: { speaker: "Финал", class: "system", text: "🌀 КОНЦОВКА: МЕТА-СУЩЕСТВО\n\nТы осознал: мы все — туман, реальный пока его видят.", ending: "meta", choices: [{ label: "Начать заново", next: "start", restart: true }] },
+  ending_void: { speaker: "Финал", class: "system", text: "🌑 КОНЦОВКА: НИЧТО\n\nТы растворился в тумане от избытка вопросов.", ending: "void", choices: [{ label: "Начать заново", next: "start", restart: true }] },
+  ending_coauthor: { speaker: "Финал", class: "author", text: "✍️ КОНЦОВКА: СО-АВТОР (SECRET)\n\nТы нашёл баланс между волей и сценарием.", ending: "coauthor", choices: [{ label: "Начать заново", next: "start", restart: true }] }
 };
 
 const dialogEl = document.getElementById("dialog");
@@ -409,23 +445,185 @@ const statsEl = document.getElementById("stats");
 const metaBtn = document.getElementById("metaBtn");
 const metaPanel = document.getElementById("meta-panel");
 
+// === HIDDEN MECHANICS ===
+
+function applyHiddenDrift() {
+  const now = Date.now();
+  const timeSinceLastChoice = (now - state.lastChoiceTime) / 1000; // seconds
+  
+  // Тихий дрейф: каждые 30 секунд бездействия
+  if (timeSinceLastChoice > 30) {
+    const driftAmount = Math.floor(timeSinceLastChoice / 30);
+    if (driftAmount > state.hiddenDrift) {
+      state.hiddenDrift = driftAmount;
+      state.selfAwareness += 1; // Пассивная осознанность
+      state.authorWhispers += 1;
+      showHiddenEvent(`Время течёт... Осознанность растёт сама по себе (+1)`);
+      saveState();
+    }
+  }
+}
+
+function applyPathMomentum(newPath) {
+  if (newPath && newPath !== 'neutral' && newPath === state.path) {
+    state.pathMomentum += 1;
+    // Инерция: чем дольше идёшь путём, тем сложнее свернуть
+    if (state.pathMomentum >= 3) {
+      showHiddenEvent(`Инерция пути "${newPath}" усиливается. Свернуть становится сложнее.`);
+    }
+  } else if (newPath && newPath !== state.path) {
+    // Смена пути сложнее при высокой инерции
+    if (state.pathMomentum > 2) {
+      state.resistance -= 1; // Инерция "тянет назад"
+      showHiddenEvent(`Инерция предыдущего пути сопротивляется changes (-1 resistance)`);
+    }
+    state.pathMomentum = 0;
+    state.path = newPath;
+  }
+}
+
+function checkParadox(choiceLabel, choiceStats) {
+  state.choiceHistory.push({ label: choiceLabel, stats: choiceStats, time: Date.now() });
+  
+  // Проверка на противоречия в последних 3 выборах
+  const recentChoices = state.choiceHistory.slice(-3);
+  let paradoxDetected = false;
+  
+  // Пример: если выбрал "принять сценарий" а потом "бунт"
+  const hasAccept = recentChoices.some(c => c.label.includes("принять") || c.label.includes("честно") || c.label.includes("служить"));
+  const hasRebel = recentChoices.some(c => c.label.includes("бунт") || c.label.includes("свободен") || c.label.includes("откажусь"));
+  
+  if (hasAccept && hasRebel) {
+    paradoxDetected = true;
+    state.paradoxCount += 1;
+    state.selfAwareness += 1; // Парадоксы ведут к осознанию
+    showHiddenEvent(`Парадокс обнаружен! Противоречивые выборы усиливают осознанность (+1)`);
+  }
+  
+  // Очистка старой истории
+  if (state.choiceHistory.length > 10) {
+    state.choiceHistory = state.choiceHistory.slice(-10);
+  }
+  
+  return paradoxDetected;
+}
+
+function authorWhisper() {
+  // Случайный шёпот Автора (10% шанс при каждом выборе)
+  if (Math.random() < 0.1) {
+    const whispers = [
+      "Я уже написал этот выбор...",
+      "Ты думаешь, что выбираешь?",
+      "Этот путь ведёт туда, куда я хочу",
+      "Твоё сопротивление предсказано",
+      "Я вижу все твои пути одновременно"
+    ];
+    const whisper = whispers[Math.floor(Math.random() * whispers.length)];
+    state.authorWhispers += 1;
+    showHiddenEvent(`👁 Шёпот Автора: "${whisper}"`);
+    
+    // Лёгкое скрытое влияние
+    if (Math.random() < 0.5) {
+      state.resistance -= 1;
+      saveState();
+    }
+  }
+}
+
+function applyEchoFromPreviousLives() {
+  // Эхо прошлых прохождений влияет на текущее
+  if (state.previousLives.length > 0) {
+    const lastLife = state.previousLives[0];
+    
+    // Если в прошлой жизни был высокий бунт, в этой сложнее бунтовать
+    if (lastLife.finalResistance > 20) {
+      state.resistance = Math.max(0, state.resistance - 2);
+      showHiddenEvent(`Эхо прошлого: твой предыдущий бунт истощил силы (-2 resistance)`);
+    }
+    
+    // Если достиг мета-концовки, осознанность растёт быстрее
+    if (lastLife.ending === 'meta' || lastLife.ending === 'coauthor') {
+      state.selfAwareness += 1;
+      showHiddenEvent(`Эхо мудрости: прошлое просветление отзывается в настоящем (+1 awareness)`);
+    }
+  }
+}
+
+function showHiddenEvent(text) {
+  // Показываем скрытое событие как особое сообщение
+  const msg = document.createElement("div");
+  msg.className = "message hidden-event";
+  msg.innerHTML = `<div class="msg-header">👁 Скрытое изменение</div><div class="msg-body">${text}</div>`;
+  
+  // Вставляем перед диалогом
+  dialogEl.insertBefore(msg, dialogEl.firstChild);
+  
+  // Сохраняем в историю
+  if (!state.hiddenEventsTriggered.includes(text)) {
+    state.hiddenEventsTriggered.push(text);
+  }
+  
+  // Автоудаление через 5 секунд
+  setTimeout(() => {
+    msg.style.opacity = "0";
+    setTimeout(() => msg.remove(), 400);
+  }, 5000);
+}
+
+function checkHiddenTriggers(nodeId, choice) {
+  // Специальные триггеры для скрытых событий
+  
+  // Триггер: 5-й визит в start
+  const startVisits = state.visitedNodes.filter(n => n === 'start').length;
+  if (startVisits === 5 && !state.hiddenEventsTriggered.includes('Пятый круг')) {
+    showHiddenEvent(`Ты возвращаешься к началу в пятый раз... Может, ты ищешь выход, которого нет?`);
+    state.selfAwareness += 2;
+  }
+  
+  // Триггер: чистый путь (только один тип выборов)
+  const pathCounts = {};
+  state.choiceHistory.forEach(c => {
+    if (c.label.includes("дверь") || c.label.includes("принять")) pathCounts.stoic = (pathCounts.stoic || 0) + 1;
+    if (c.label.includes("бунт") || c.label.includes("свобод")) pathCounts.rebel = (pathCounts.rebel || 0) + 1;
+    if (c.label.includes("Орфей") || c.label.includes("сейчас")) pathCounts.mystic = (pathCounts.mystic || 0) + 1;
+  });
+  
+  const maxPath = Object.entries(pathCounts).sort((a,b) => b[1] - a[1])[0];
+  if (maxPath && maxPath[1] >= 6 && !state.hiddenEventsTriggered.includes(`Чистый путь ${maxPath[0]}`)) {
+    showHiddenEvent(`Ты последовательно следуешь путём "${maxPath[0]}". Твоя решимость замечена.`);
+    state.pathMomentum += 3;
+  }
+}
+
+// === STATE MANAGEMENT ===
+
 function saveState() {
   localStorage.setItem('niebla_resistance', state.resistance.toString());
   localStorage.setItem('niebla_orfeo', state.orfeoTrust.toString());
   localStorage.setItem('niebla_awareness', state.selfAwareness.toString());
   localStorage.setItem('niebla_path', state.path);
   localStorage.setItem('niebla_visited', JSON.stringify(state.visitedNodes));
+  localStorage.setItem('niebla_drift', state.hiddenDrift.toString());
+  localStorage.setItem('niebla_momentum', state.pathMomentum.toString());
+  localStorage.setItem('niebla_lives', JSON.stringify(state.previousLives));
+  localStorage.setItem('niebla_choices', JSON.stringify(state.choiceHistory));
+  localStorage.setItem('niebla_whispers', state.authorWhispers.toString());
+  localStorage.setItem('niebla_paradox', state.paradoxCount.toString());
+  localStorage.setItem('niebla_hidden_events', JSON.stringify(state.hiddenEventsTriggered));
 }
 
 function updateStats() {
   const pathNames = { stoic: "Стоик", rebel: "Бунтарь", mystic: "Мистик", neutral: "Наблюдатель" };
   const warnHtml = state.resistance > 20 ? `<span class="warning-text">⚠️ ${state.resistance > 30 ? "КРИТИЧЕСКИЙ УРОВЕНЬ" : "Приближается порог вмешательства"}</span>` : '';
+  const hiddenHtml = state.pathMomentum > 2 ? `<span class="hidden-indicator">↻ Инерция: ${state.pathMomentum}</span>` : '';
   
   statsEl.innerHTML = `
     <div class="stat">Бунт <span class="stat-value">${state.resistance}</span>${warnHtml}</div>
     <div class="stat">Доверие Орфея <span class="stat-value">${state.orfeoTrust}</span></div>
-    <div class="stat">Осознанность <span class="stat-value">${state.selfAwareness}</span></div>
+    <div class="stat">Осознанность <span class="stat-value">${state.selfAwareness}</span>${hiddenHtml}</div>
     <div class="stat">Путь <span class="stat-value">${pathNames[state.path] || "Нейтральный"}</span></div>
+    <div class="stat">Шёпоты <span class="stat-value">${state.authorWhispers}</span></div>
+    <div class="stat">Парадоксы <span class="stat-value">${state.paradoxCount}</span></div>
   `;
 }
 
@@ -450,17 +648,32 @@ function typeWriter(text, target, speed = 20, done) {
 }
 
 function renderNode(nodeId) {
+  // HIDDEN MECHANICS TRIGGER
+  applyHiddenDrift();
+  authorWhisper();
+  
   const node = graph[nodeId];
   if (!node) { console.error("Node not found:", nodeId); return; }
 
   state.currentNode = nodeId;
   if (!state.visitedNodes.includes(nodeId)) state.visitedNodes.push(nodeId);
+  
   saveState();
   updateStats();
   choicesEl.innerHTML = "";
   dialogEl.innerHTML = "";
 
   if (node.ending) {
+    // Save life to history
+    state.previousLives.unshift({
+      ending: node.ending,
+      finalResistance: state.resistance,
+      finalAwareness: state.selfAwareness,
+      finalPath: state.path,
+      date: new Date().toISOString()
+    });
+    if (state.previousLives.length > 5) state.previousLives.pop();
+    
     const msg = document.createElement("div");
     msg.className = `message ${node.class}`;
     msg.innerHTML = node.text;
@@ -503,13 +716,8 @@ function renderAuthorOverride(node) {
 
   const forcedChoice = node.choices[0];
   panel.querySelector('.override-btn').onclick = () => {
-    if (forcedChoice.stats) {
-      if (forcedChoice.stats.resistance) state.resistance += forcedChoice.stats.resistance;
-      if (forcedChoice.stats.orfeoTrust) state.orfeoTrust += forcedChoice.stats.orfeoTrust;
-      if (forcedChoice.stats.selfAwareness) state.selfAwareness += forcedChoice.stats.selfAwareness;
-      if (forcedChoice.stats.path) state.path = forcedChoice.stats.path;
-    }
-    state.resistance = Math.max(0, state.resistance - 5); // Автор "гасит" бунт
+    applyChoiceEffects(forcedChoice);
+    state.resistance = Math.max(0, state.resistance - 5);
     saveState();
     updateStats();
     
@@ -523,6 +731,35 @@ function renderAuthorOverride(node) {
   };
 }
 
+function applyChoiceEffects(choice) {
+  // Apply visible stats
+  if (choice.stats) {
+    if (choice.stats.resistance) state.resistance += choice.stats.resistance;
+    if (choice.stats.orfeoTrust) state.orfeoTrust += choice.stats.orfeoTrust;
+    if (choice.stats.selfAwareness) state.selfAwareness += choice.stats.selfAwareness;
+    if (choice.stats.path) {
+      applyPathMomentum(choice.stats.path);
+    }
+  }
+  
+  // Apply HIDDEN stats
+  if (choice.hidden) {
+    if (choice.hidden.momentum) state.pathMomentum += choice.hidden.momentum;
+    if (choice.hidden.drift) state.hiddenDrift += choice.hidden.drift;
+    if (choice.hidden.awareness) state.selfAwareness += choice.hidden.awareness;
+    if (choice.hidden.paradox) {
+      state.paradoxCount += choice.hidden.paradox;
+      checkParadox(choice.label, choice.stats);
+    }
+    if (choice.hidden.whisper) state.authorWhispers += choice.hidden.whisper;
+  }
+  
+  // Check hidden triggers
+  checkHiddenTriggers(state.currentNode, choice);
+  
+  state.lastChoiceTime = Date.now();
+}
+
 function renderChoices(choices, node) {
   if (!choices) return;
   choices.forEach(choice => {
@@ -530,18 +767,18 @@ function renderChoices(choices, node) {
     const btn = document.createElement("button");
     btn.textContent = choice.label;
     btn.onclick = () => {
-      if (choice.stats) {
-        if (choice.stats.resistance) state.resistance += choice.stats.resistance;
-        if (choice.stats.orfeoTrust) state.orfeoTrust += choice.stats.orfeoTrust;
-        if (choice.stats.selfAwareness) state.selfAwareness += choice.stats.selfAwareness;
-        if (choice.stats.path) state.path = choice.stats.path;
-      }
+      applyChoiceEffects(choice);
+      
       if (choice.restart) {
         state.resistance = 0; state.orfeoTrust = 0; state.selfAwareness = 0;
         state.path = "neutral"; state.visitedNodes = [];
+        state.hiddenDrift = 0; state.pathMomentum = 0;
+        state.choiceHistory = []; state.authorWhispers = 0; state.paradoxCount = 0;
         localStorage.clear();
       }
+      
       saveState(); updateStats();
+      
       if (choice.next) {
         dialogEl.style.opacity = "0.6";
         setTimeout(() => { dialogEl.style.opacity = "1"; renderNode(choice.next); }, 300);
@@ -556,10 +793,21 @@ metaBtn.onclick = () => {
   metaBtn.textContent = metaPanel.classList.contains("active") ? "✕ Скрыть" : "⟁ Карта";
 };
 
+// === INIT ===
 window.addEventListener("DOMContentLoaded", () => {
   updateStats();
+  applyEchoFromPreviousLives(); // Apply echo on load
   setTimeout(() => renderNode("start"), 400);
-  console.log("🌫️ «Ты вошёл в туман. Теперь ты часть истории.»");
+  
+  // Periodic hidden drift check
+  setInterval(() => {
+    applyHiddenDrift();
+    updateStats();
+  }, 10000);
+  
+  console.log("🌫️ «Ты вошёл в туман. Некоторые пути скрыты от глаз.»");
+  console.log(`👁 Прошлых жизней: ${state.previousLives.length}`);
+  console.log(`👁 Скрытых событий: ${state.hiddenEventsTriggered.length}`);
 });
 </script>
 </body>
